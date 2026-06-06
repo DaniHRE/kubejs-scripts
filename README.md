@@ -1,16 +1,16 @@
 # ⚙️ KubeJS Scripts
-
 Repositório pessoal com scripts [KubeJS](https://kubejs.com/) utilizados nos meus servidores de Minecraft.
 
 ---
 
 ## 📁 Estrutura
-
 ```
 📦 kubejs-scripts
 ├── 📂 Nightfall - Casket of Reveries
 │   └── ...
-└── 📂 Deceasedcraft 5.10.16
+├── 📂 Deceasedcraft 5.10.16
+│   └── ...
+└── 📂 Prominence II - Hasturian Era
     └── ...
 ```
 
@@ -20,38 +20,43 @@ Repositório pessoal com scripts [KubeJS](https://kubejs.com/) utilizados nos me
 
 ### 🌙 Nightfall: Casket of Reveries
 Scripts utilizados no servidor do modpack **NightfallCraft - The Casket of Reveries**.
-
 > Pasta: `Nightfall - Casket of Reveries/`
 
 ---
 
 ### ☠️ Deceasedcraft 5.10.16
 Scripts utilizados no servidor do modpack **Deceasedcraft** na versão **5.10.16**.
-
 > Pasta: `Deceasedcraft 5.10.16/`
 
 ---
 
-## 🚀 Como usar
+### 👁️ Prominence™ II: Hasturian Era
+Scripts utilizados no servidor do modpack **Prominence™ II: Hasturian Era**.
+> Pasta: `Prominence II - Hasturian Era/`
 
+| Script | Descrição |
+|---|---|
+| `prominence_serverready.js` | Arte de boot no console com cores ANSI ao iniciar o servidor |
+| `prominence_restart.js` | Sistema de restart com countdown via `/prominence restart <minutos>` |
+| `prominence_login.js` | Mensagem de boas-vindas e links ao jogador entrar no servidor |
+
+---
+
+## 🚀 Como usar
 1. Clone o repositório:
    ```bash
    git clone https://github.com/DaniHRE/kubejs-scripts.git
    ```
-
 2. Copie os arquivos da pasta do modpack desejado para a pasta `kubejs/` da sua instância do Minecraft.
-
 3. Reinicie o servidor ou rode `/kubejs reload` no jogo.
 
 ---
 
 ## 📝 Notas
-
 - Os scripts foram feitos para uso pessoal e podem precisar de ajustes dependendo da versão do KubeJS e dos mods instalados.
 - Sempre faça backup dos seus arquivos antes de substituir qualquer script.
 
 ---
 
 ## 📜 Licença
-
 Uso pessoal. Sinta-se livre para usar como referência.
