@@ -81,7 +81,7 @@ function msgAvisoSegundos(seg) {
 function msgLimpeza(qtd, dimensoes) {
   var txt = prefixo()
     .append(Text.of('Limpeza concluída: ').color(0xF0C070))
-    .append(Text.of(qtd + ' item' + (qtd !== 1 ? 'ns' : '')).color(0xFF4455).bold())
+    .append(Text.of(qtd + ' item' + (qtd !== 1 ? 's' : '')).color(0xFF4455).bold())
     .append(Text.of(' removido' + (qtd !== 1 ? 's' : '') + ' ').color(0xF0C070))
 
   if (dimensoes && dimensoes.length > 0) {
