@@ -45,72 +45,70 @@ var PERMISSAO_COMANDO = 0
 var tickInicioUltimoCiclo = -1
 var INTERVALO_TICKS_GLOBAL = 0
 
-// ── PALETA DE CORES (Craftoria) ───────────────────────────────
-//   Cobre/laranja  0xE07830   §6
-//   Bege dourado   0xF0C070   §e
-//   Ciano élfico   0x2AFFDD   §b
-//   Cinza pedra    0x8899AA   §7
-//   Vermelho       0xFF4455   §c
-//   Branco         0xFFFFFF   §f
+// ── PALETA ───────────────────────────────────────────────────
+//   Âmbar / marca     0xE8A44A   (nome do servidor, label comando)
+//   Verde-ciano       0x5ECFB1   (símbolo ◈, mensagens neutras/info)
+//   Branco            0xF5F5F5   (destaques — contagem, tempo)
+//   Cinza separador   0x666666   (│, detalhes secundários)
+//   Cinza texto       0xC8D0D8   (corpo das mensagens)
+//   Laranja urgência  0xF5A623   (aviso 1 min)
+//   Vermelho          0xFF6B6B   (contagem removida, countdown)
+//   Vermelho crítico  0xFF4444   (countdown ≤ 3s)
+
+// ── COMPONENTES DE TEXTO ─────────────────────────────────────
+
+function prefixo() {
+  return Text.of('◈ ').color(0x5ECFB1)
+    .append(Text.of('Craftoria').color(0x00FF7F).bold())
+    .append(Text.of(' │ ').color(0x666666))
+}
 
 // ── MENSAGENS ─────────────────────────────────────────────────
 
-function prefixo() {
-  return Text.of(' ⚙ ').color(0x2AFFDD)
-    .append(Text.of('Craftoria').color(0xE07830).bold())
-    .append(Text.of(' › ').color(0x8899AA))
-}
-
 function msgAvisoMinutos(min) {
   var urgente = min <= 1
+  if (urgente) {
+    return prefixo()
+      .append(Text.of('Limpeza em ').color(0xF5A623).bold())
+      .append(Text.of(min + ' minuto!').color(0xFFFFFF).bold())
+  }
   return prefixo()
-    .append(Text.of('Limpeza de itens do chão em ').color(urgente ? 0xFFAA00 : 0xF0C070))
-    .append(Text.of(min + ' minuto' + (min > 1 ? 's' : '')).color(0xFFFFFF).bold())
-    .append(Text.of('! ').color(urgente ? 0xFFAA00 : 0xF0C070))
-    .append(Text.of('Guarde seus itens.').color(0x8899AA).italic())
+    .append(Text.of('Limpeza em ').color(0xC8D0D8))
+    .append(Text.of(min + ' minutos').color(0xF5F5F5).bold())
+    .append(Text.of('. Guarde seus itens.').color(0xC8D0D8))
 }
 
 function msgAvisoSegundos(seg) {
-  var cor = seg <= 3 ? 0xFF4455 : 0xFFAA00
+  var critico = seg <= 3
+  var cor = critico ? 0xFF4444 : 0xFF6B6B
   return prefixo()
-    .append(Text.of('Removendo itens em ').color(cor))
+    .append(Text.of('Removendo em ').color(cor).bold())
     .append(Text.of(seg + 's').color(0xFFFFFF).bold())
-    .append(Text.of('...').color(cor))
+    .append(Text.of('...').color(0x888888))
 }
 
-function msgLimpeza(qtd, dimensoes) {
-  var txt = prefixo()
-    .append(Text.of('Limpeza concluída: ').color(0xF0C070))
-    .append(Text.of(qtd + ' item' + (qtd !== 1 ? 's' : '')).color(0xFF4455).bold())
-    .append(Text.of(' removido' + (qtd !== 1 ? 's' : '') + ' ').color(0xF0C070))
-
-  if (dimensoes && dimensoes.length > 0) {
-    txt = txt.append(Text.of('(' + dimensoes.join(', ') + ')').color(0x8899AA).italic())
-  }
-
-  return txt
+function msgLimpeza(qtd) {
+  var plural = qtd !== 1
+  return prefixo()
+    .append(Text.of('Limpeza concluída: ').color(0xC8D0D8))
+    .append(Text.of(qtd + (plural ? ' itens' : ' item')).color(0xFF6B6B).bold())
+    .append(Text.of(plural ? ' removidos' : ' removido').color(0xC8D0D8))
 }
 
 function msgNada() {
   return prefixo()
-    .append(Text.of('Nenhum item encontrado no chão.').color(0x2AFFDD))
+    .append(Text.of('Nenhum item no chão no momento.').color(0x5ECFB1))
 }
 
-function msgComando(qtd, dimensoes) {
-  var txt = prefixo()
-    .append(Text.of('Limpeza manual: ').color(0xE07830))
-    .append(Text.of(qtd + ' item' + (qtd !== 1 ? 'ns' : '') + ' removido' + (qtd !== 1 ? 's' : '') + ' ').color(0xFFFFFF))
-
-  if (dimensoes && dimensoes.length > 0) {
-    txt = txt.append(Text.of('(' + dimensoes.join(', ') + ')').color(0x8899AA).italic())
-  }
-
-  return txt
+function msgComando(qtd) {
+  var plural = qtd !== 1
+  return prefixo()
+    .append(Text.of(qtd + (plural ? ' itens' : ' item') + (plural ? ' removidos' : ' removido')).color(0xF5F5F5))
 }
 
 function msgComandoNada() {
   return prefixo()
-    .append(Text.of('Não há itens no chão no momento.').color(0x2AFFDD))
+    .append(Text.of('Nenhum item no chão no momento.').color(0x5ECFB1))
 }
 
 function msgStatus(server) {
@@ -122,15 +120,14 @@ function msgStatus(server) {
   var totalSeg = Math.floor(ticksRestantes / 20)
   var min = Math.floor(totalSeg / 60)
   var seg = totalSeg % 60
-  var tempoStr = min > 0
-    ? min + 'min ' + seg + 's'
-    : seg + 's'
+  var tempoStr = min > 0 ? min + 'min ' + seg + 's' : seg + 's'
 
   return prefixo()
-    .append(Text.of('Próxima limpeza em ').color(0xF0C070))
-    .append(Text.of(tempoStr).color(0x2AFFDD).bold())
-    .append(Text.of(' · Intervalo: ').color(0x8899AA))
-    .append(Text.of(INTERVALO_MINUTOS + 'min').color(0xE07830))
+    .append(Text.of('Próxima limpeza em ').color(0xC8D0D8))
+    .append(Text.of(tempoStr).color(0x5ECFB1).bold())
+    .append(Text.of('  ·  ').color(0x444444))
+    .append(Text.of('Intervalo: ').color(0x666666))
+    .append(Text.of(INTERVALO_MINUTOS + 'min').color(0xE8A44A))
 }
 
 // ── LIMPEZA ───────────────────────────────────────────────────
@@ -139,12 +136,11 @@ function nomeDimensao(level) {
   try {
     var key = level.dimension.location()
     var path = key.getPath()
-    // Formata: minecraft:overworld → Overworld
     var partes = path.split('/')
     var nome = partes[partes.length - 1]
     return nome.charAt(0).toUpperCase() + nome.slice(1).replace(/_/g, ' ')
   } catch (e) {
-    return 'Dimensão desconhecida'
+    return 'Desconhecida'
   }
 }
 
@@ -211,7 +207,6 @@ ServerEvents.loaded(function (event) {
 
     // Countdown em segundos
     for (var seg = COUNTDOWN_SEGUNDOS; seg >= 1; seg--) {
-      // Evita sobrepor com avisos de minutos inteiros
       if (seg % 60 === 0 && AVISOS_MINUTOS.indexOf(seg / 60) !== -1) continue
       ;(function (s) {
         server.scheduleInTicks(INTERVALO_TICKS - (s * 20), function () {
@@ -225,7 +220,7 @@ ServerEvents.loaded(function (event) {
       var resultado = executarLimpeza(server)
       server.tell(
         resultado.qtd > 0
-          ? msgLimpeza(resultado.qtd, resultado.dimensoes)
+          ? msgLimpeza(resultado.qtd)
           : msgNada()
       )
       agendarCiclo()
@@ -235,8 +230,8 @@ ServerEvents.loaded(function (event) {
   agendarCiclo()
 
   console.info('[Craftoria] ItemCleaner ativo — ' +
-    INTERVALO_MINUTOS + 'min › Countdown: ' +
-    COUNTDOWN_SEGUNDOS + 's › Avisos: ' +
+    INTERVALO_MINUTOS + 'min · Countdown: ' +
+    COUNTDOWN_SEGUNDOS + 's · Avisos: ' +
     AVISOS_MINUTOS.join(', ') + ' min antes')
 })
 
@@ -255,7 +250,7 @@ ServerEvents.commandRegistry(function (event) {
             var resultado = executarLimpeza(server)
             server.tell(
               resultado.qtd > 0
-                ? msgComando(resultado.qtd, resultado.dimensoes)
+                ? msgComando(resultado.qtd)
                 : msgComandoNada()
             )
             return 1
