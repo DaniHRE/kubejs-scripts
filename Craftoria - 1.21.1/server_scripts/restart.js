@@ -4,57 +4,33 @@
 //   Arquivo: kubejs/server_scripts/craftoria_restart.js
 // ═══════════════════════════════════════════════════════════════
 //
-//   USO:
-//     /craftoria restart <minutos>
-//
-//   EXEMPLOS:
-//     /craftoria restart 10   → countdown de 10 minutos
-//     /craftoria restart 5    → countdown de 5 minutos
-//     /craftoria restart 1    → aviso de último minuto
-//     /craftoria restart 0    → reinicia imediatamente
-//
-//   PERMISSÕES:
-//     Apenas operadores (nível 2+) podem executar o comando.
-//
-// ═══════════════════════════════════════════════════════════════
-//
-//   PALETA DE CORES (baseada na arte oficial do modpack)
-//   ┌─────────────────────┬───────────┬────────────┬──────────┐
-//   │ Papel               │ Hex       │ 0x (chat)  │ § code   │
-//   ├─────────────────────┼───────────┼────────────┼──────────┤
-//   │ Cobre/laranja (marca)│ #E07830  │ 0xE07830   │ §6       │
-//   │ Laranja vivo        │ #C8642A   │ 0xC8642A   │ §6       │
-//   │ Ciano élfico        │ #2AFFDD   │ 0x2AFFDD   │ §b       │
-//   │ Bege/dourado texto  │ #F0C070   │ 0xF0C070   │ §e       │
-//   │ Marrom fundo        │ #3D1F0F   │ 0x3D1F0F   │ §8       │
-//   │ Cinza pedra         │ #8899AA   │ 0x8899AA   │ §7       │
-//   │ Vermelho alerta     │ #FF4455   │ 0xFF4455   │ §c       │
-//   │ Âmbar aviso         │ #FFAA00   │ 0xFFAA00   │ §6       │
-//   └─────────────────────┴───────────┴────────────┴──────────┘
+//   COMANDOS:
+//     /craftoria restart <minutos>         → agenda countdown
+//     /craftoria restart delay <minutos>   → posterga o restart ativo
+//     /craftoria restart cancel            → cancela o restart ativo
+//     /craftoria restart 0                 → restart imediato
 //
 // ═══════════════════════════════════════════════════════════════
 
-// ── Avisos programados (em minutos antes do restart) ────────────
-const AVISOS_MINUTOS = [30, 20, 15, 10, 5, 3, 2, 1]
+var restartVersion = 0
+var restartAtivo = false
+var restartMinutosTotal = 0
 
-// ── Avisos em segundos (no último minuto) ───────────────────────
-const AVISOS_SEGUNDOS = [30, 15, 10, 5, 4, 3, 2, 1]
+var AVISOS_MINUTOS  = [30, 20, 15, 10, 5, 3, 2, 1]
+var AVISOS_SEGUNDOS = [30, 15, 10, 5, 4, 3, 2, 1]
 
-// ── Cor dos títulos na tela ──────────────────────────────────────
 function corTitulo(minutosRestantes) {
     if (minutosRestantes <= 1) return 'red'
     if (minutosRestantes <= 5) return 'gold'
-    return 'aqua'           // ciano élfico Craftoria
+    return 'aqua'
 }
 
-// ── Cor do texto no chat ─────────────────────────────────────────
 function corChat(minutosRestantes) {
-    if (minutosRestantes <= 1) return 0xFF4455   // vermelho alerta
-    if (minutosRestantes <= 5) return 0xFFAA00   // âmbar aviso
-    return 0xE07830                              // cobre/laranja Craftoria
+    if (minutosRestantes <= 1) return 0xFF4455
+    if (minutosRestantes <= 5) return 0xFFAA00
+    return 0xE07830
 }
 
-// ── Formatação de tempo para exibição ───────────────────────────
 function formatarTempo(minutos, segundos) {
     if (minutos > 0 && segundos === undefined) {
         return minutos === 1 ? '1 minuto' : minutos + ' minutos'
@@ -65,14 +41,13 @@ function formatarTempo(minutos, segundos) {
     return minutos + 'm ' + segundos + 's'
 }
 
-// ── Função: Aviso broadcast para todos os jogadores ─────────────
 function avisarTodos(server, minutos, segundos) {
-    let tempoStr = formatarTempo(minutos, segundos)
-    let cor = minutos === 0 ? 0xFF4455 : corChat(minutos)
-    let prefixo = minutos <= 1 && segundos === undefined ? '⚠' : '⚙'
-    let urgente = minutos === 0 || (minutos <= 1 && segundos !== undefined && segundos <= 10)
+    var tempoStr = formatarTempo(minutos, segundos)
+    var cor = minutos === 0 ? 0xFF4455 : corChat(minutos)
+    var prefixo = minutos <= 1 && segundos === undefined ? '⚠' : '⚙'
+    var urgente = minutos === 0 || (minutos <= 1 && segundos !== undefined && segundos <= 10)
 
-    server.players.forEach(p => {
+    server.players.forEach(function(p) {
         server.runCommandSilent('/title ' + p.username + ' times 10 40 10')
         server.runCommandSilent(
             '/title ' + p.username + ' title ' +
@@ -87,7 +62,7 @@ function avisarTodos(server, minutos, segundos) {
         )
     })
 
-    let pitch = minutos === 0 ? 2.0 : minutos <= 1 ? 1.5 : minutos <= 5 ? 1.2 : 1.0
+    var pitch = minutos === 0 ? 2.0 : minutos <= 1 ? 1.5 : minutos <= 5 ? 1.2 : 1.0
     server.runCommandSilent(
         '/execute as @a run playsound minecraft:block.amethyst_block.chime master @s ~ ~ ~ 1 ' + pitch
     )
@@ -117,67 +92,100 @@ function avisarTodos(server, minutos, segundos) {
     }
 }
 
-// ── Função: Mensagem de início do countdown ─────────────────────
 function anunciarInicio(server, minutos, quemChamou) {
     server.tell(Text.of('§6§m                                                  '))
-
     server.tell(
         Text.of('  ⚙ CRAFTORIA — REINÍCIO AGENDADO ✦')
-            .color(0xE07830)    // cobre/laranja
+            .color(0xE07830)
             .bold(true)
     )
-
     server.tell(Text.of(' '))
-
     server.tell(
         Text.of('  ◈ O servidor será reiniciado em ')
-            .color(0xF0C070)    // bege dourado
+            .color(0xF0C070)
         .append(
             Text.of(formatarTempo(minutos))
                 .color(0xFFFFFF)
                 .bold(true)
         )
-        .append(
-            Text.of('.')
-                .color(0xF0C070)
-        )
+        .append(Text.of('.').color(0xF0C070))
     )
-
     server.tell(
         Text.of('  ➤ Finalize suas atividades e salve seu progresso.')
-            .color(0x8899AA)    // cinza pedra
+            .color(0x8899AA)
             .italic(true)
     )
-
     server.tell(Text.of(' '))
-
-    server.tell(
-        Text.of('  §8Solicitado por: §7' + quemChamou)
-    )
-
+    server.tell(Text.of('  §8Solicitado por: §7' + quemChamou))
     server.tell(Text.of('§6§m                                                  '))
 }
 
-// ── Função: Restart imediato — kick de todos + /stop ────────────
-function anunciarRestartImediato(server) {
+function anunciarPostergamento(server, minutosAdicionados, novoTotal, quemChamou) {
     server.tell(Text.of('§6§m                                                  '))
-
     server.tell(
-        Text.of('  ⚠ O SERVIDOR ESTÁ REINICIANDO AGORA ⚠')
-            .color(0xFF4455)    // vermelho alerta
+        Text.of('  ⏱ CRAFTORIA — RESTART POSTERGADO')
+            .color(0xFFAA00)
             .bold(true)
     )
-
+    server.tell(Text.of(' '))
     server.tell(
-        Text.of('  Até logo, aventureiros da Craftoria...')
-            .color(0x2AFFDD)    // ciano élfico
+        Text.of('  ◈ O restart foi adiado em ')
+            .color(0xF0C070)
+        .append(
+            Text.of(formatarTempo(minutosAdicionados))
+                .color(0xFFFFFF)
+                .bold(true)
+        )
+        .append(Text.of('.').color(0xF0C070))
+    )
+    server.tell(
+        Text.of('  ◈ Novo tempo restante: ')
+            .color(0xF0C070)
+        .append(
+            Text.of(formatarTempo(novoTotal))
+                .color(0x2AFFDD)
+                .bold(true)
+        )
+        .append(Text.of('.').color(0xF0C070))
+    )
+    server.tell(Text.of(' '))
+    server.tell(Text.of('  §8Postergado por: §7' + quemChamou))
+    server.tell(Text.of('§6§m                                                  '))
+}
+
+function anunciarCancelamento(server, quemChamou) {
+    server.tell(Text.of('§6§m                                                  '))
+    server.tell(
+        Text.of('  ✔ CRAFTORIA — RESTART CANCELADO')
+            .color(0x2AFFDD)
+            .bold(true)
+    )
+    server.tell(Text.of(' '))
+    server.tell(
+        Text.of('  O servidor não será reiniciado por enquanto.')
+            .color(0x8899AA)
             .italic(true)
     )
+    server.tell(Text.of(' '))
+    server.tell(Text.of('  §8Cancelado por: §7' + quemChamou))
+    server.tell(Text.of('§6§m                                                  '))
+}
 
+function anunciarRestartImediato(server) {
+    server.tell(Text.of('§6§m                                                  '))
+    server.tell(
+        Text.of('  ⚠ O SERVIDOR ESTÁ REINICIANDO AGORA ⚠')
+            .color(0xFF4455)
+            .bold(true)
+    )
+    server.tell(
+        Text.of('  Até logo, aventureiros da Craftoria...')
+            .color(0x2AFFDD)
+            .italic(true)
+    )
     server.tell(Text.of('§6§m                                                  '))
 
-    // Kick de todos com mensagem temática na tela de desconexão
-    server.players.forEach(p => {
+    server.players.forEach(function(p) {
         server.runCommandSilent(
             '/kick ' + p.username +
             ' §6⚙ Craftoria §r\n' +
@@ -188,23 +196,71 @@ function anunciarRestartImediato(server) {
     })
 }
 
-// ── Registro do Comando ──────────────────────────────────────────
-ServerEvents.commandRegistry(event => {
-    const { commands: Commands, arguments: Arguments } = event
+// ── Função central: agenda todos os ticks para uma versão ─────
+function agendarRestart(server, minutos, versao) {
+    var totalTicks = minutos * 60 * 20
+
+    // Avisos em minutos
+    for (var i = 0; i < AVISOS_MINUTOS.length; i++) {
+        var m = AVISOS_MINUTOS[i]
+        if (m < minutos) {
+            var ticksAteMin = (minutos - m) * 60 * 20
+            ;(function(capM, capV, capTicks) {
+                server.scheduleInTicks(capTicks, function() {
+                    if (restartVersion !== capV) return
+                    avisarTodos(server, capM, undefined)
+                })
+            })(m, versao, ticksAteMin)
+        }
+    }
+
+    // Avisos em segundos (último minuto)
+    if (minutos >= 1) {
+        var baseTicks = (minutos - 1) * 60 * 20
+        for (var j = 0; j < AVISOS_SEGUNDOS.length; j++) {
+            var s = AVISOS_SEGUNDOS[j]
+            var ticksAteSeg = baseTicks + ((60 - s) * 20)
+            ;(function(capS, capV, capTicks) {
+                server.scheduleInTicks(capTicks, function() {
+                    if (restartVersion !== capV) return
+                    avisarTodos(server, 0, capS)
+                })
+            })(s, versao, ticksAteSeg)
+        }
+    }
+
+    // Restart final
+    ;(function(capV) {
+        server.scheduleInTicks(totalTicks, function() {
+            if (restartVersion !== capV) return
+            restartAtivo = false
+            anunciarRestartImediato(server)
+            server.scheduleInTicks(60, function() {
+                server.runCommandSilent('/stop')
+            })
+        })
+    })(versao)
+}
+
+// ── Registro dos Comandos ─────────────────────────────────────
+ServerEvents.commandRegistry(function(event) {
+    var Commands  = event.commands
+    var Arguments = event.arguments
 
     event.register(
         Commands.literal('craftoria')
             .then(
                 Commands.literal('restart')
+
+                    // /craftoria restart <minutos>
                     .then(
                         Commands.argument('minutos', Arguments.INTEGER.create(event))
-                            .executes(ctx => {
-                                const minutos      = Arguments.INTEGER.getResult(ctx, 'minutos')
-                                const server       = ctx.source.server
-                                const senderPlayer = ctx.source.player   // null se for console
-                                const senderNome   = senderPlayer ? senderPlayer.username : 'Servidor'
+                            .executes(function(ctx) {
+                                var minutos      = Arguments.INTEGER.getResult(ctx, 'minutos')
+                                var server       = ctx.source.server
+                                var senderPlayer = ctx.source.player
+                                var senderNome   = senderPlayer ? senderPlayer.username : 'Servidor'
 
-                                // ── Verificação de permissão ────────────────
                                 if (!ctx.source.hasPermission(2)) {
                                     if (senderPlayer) {
                                         senderPlayer.tell(
@@ -215,16 +271,16 @@ ServerEvents.commandRegistry(event => {
                                     return 0
                                 }
 
-                                // ── Restart imediato ────────────────────────
                                 if (minutos === 0) {
+                                    restartAtivo = false
+                                    restartVersion++
                                     anunciarRestartImediato(server)
-                                    server.scheduleInTicks(60, () => {
+                                    server.scheduleInTicks(60, function() {
                                         server.runCommandSilent('/stop')
                                     })
                                     return 1
                                 }
 
-                                // ── Validação ───────────────────────────────
                                 if (minutos < 0 || minutos > 120) {
                                     if (senderPlayer) {
                                         senderPlayer.tell(
@@ -235,40 +291,102 @@ ServerEvents.commandRegistry(event => {
                                     return 0
                                 }
 
-                                // ── Anúncio inicial ─────────────────────────
+                                restartVersion++
+                                restartAtivo = true
+                                restartMinutosTotal = minutos
+                                var versaoAtual = restartVersion
+
                                 anunciarInicio(server, minutos, senderNome)
+                                agendarRestart(server, minutos, versaoAtual)
+                                return 1
+                            })
+                    )
 
-                                let totalTicks = minutos * 60 * 20
+                    // /craftoria restart delay <minutos>
+                    .then(
+                        Commands.literal('delay')
+                            .then(
+                                Commands.argument('minutos', Arguments.INTEGER.create(event))
+                                    .executes(function(ctx) {
+                                        var minutos      = Arguments.INTEGER.getResult(ctx, 'minutos')
+                                        var server       = ctx.source.server
+                                        var senderPlayer = ctx.source.player
+                                        var senderNome   = senderPlayer ? senderPlayer.username : 'Servidor'
 
-                                // ── Agenda avisos em minutos ────────────────
-                                AVISOS_MINUTOS.forEach(m => {
-                                    if (m < minutos) {
-                                        let ticksAteMin = (minutos - m) * 60 * 20
-                                        server.scheduleInTicks(ticksAteMin, () => {
-                                            avisarTodos(server, m, undefined)
-                                        })
-                                    }
-                                })
+                                        if (!ctx.source.hasPermission(2)) {
+                                            if (senderPlayer) {
+                                                senderPlayer.tell(
+                                                    Text.of('  ✗ Você não tem permissão.')
+                                                        .color(0xFF4455)
+                                                )
+                                            }
+                                            return 0
+                                        }
 
-                                // ── Agenda avisos em segundos (último minuto) ─
-                                if (minutos >= 1) {
-                                    let baseTicks = (minutos - 1) * 60 * 20
-                                    AVISOS_SEGUNDOS.forEach(s => {
-                                        let ticksAteSeg = baseTicks + ((60 - s) * 20)
-                                        server.scheduleInTicks(ticksAteSeg, () => {
-                                            avisarTodos(server, 0, s)
-                                        })
+                                        if (!restartAtivo) {
+                                            if (senderPlayer) {
+                                                senderPlayer.tell(
+                                                    Text.of('  ✗ Não há nenhum restart ativo para postergar.')
+                                                        .color(0xFF4455)
+                                                )
+                                            }
+                                            return 0
+                                        }
+
+                                        if (minutos <= 0 || minutos > 120) {
+                                            if (senderPlayer) {
+                                                senderPlayer.tell(
+                                                    Text.of('  ✗ Use entre 1 e 120 minutos para postergar.')
+                                                        .color(0xFF4455)
+                                                )
+                                            }
+                                            return 0
+                                        }
+
+                                        restartMinutosTotal = restartMinutosTotal + minutos
+                                        restartVersion++
+                                        var versaoAtual = restartVersion
+
+                                        anunciarPostergamento(server, minutos, restartMinutosTotal, senderNome)
+                                        agendarRestart(server, restartMinutosTotal, versaoAtual)
+                                        return 1
                                     })
+                            )
+                    )
+
+                    // /craftoria restart cancel
+                    .then(
+                        Commands.literal('cancel')
+                            .executes(function(ctx) {
+                                var server       = ctx.source.server
+                                var senderPlayer = ctx.source.player
+                                var senderNome   = senderPlayer ? senderPlayer.username : 'Servidor'
+
+                                if (!ctx.source.hasPermission(2)) {
+                                    if (senderPlayer) {
+                                        senderPlayer.tell(
+                                            Text.of('  ✗ Você não tem permissão.')
+                                                .color(0xFF4455)
+                                        )
+                                    }
+                                    return 0
                                 }
 
-                                // ── Restart final: kick todos + /stop ───────
-                                server.scheduleInTicks(totalTicks, () => {
-                                    anunciarRestartImediato(server)
-                                    server.scheduleInTicks(60, () => {
-                                        server.runCommandSilent('/stop')
-                                    })
-                                })
+                                if (!restartAtivo) {
+                                    if (senderPlayer) {
+                                        senderPlayer.tell(
+                                            Text.of('  ✗ Não há nenhum restart ativo para cancelar.')
+                                                .color(0xFF4455)
+                                        )
+                                    }
+                                    return 0
+                                }
 
+                                restartVersion++
+                                restartAtivo = false
+                                restartMinutosTotal = 0
+
+                                anunciarCancelamento(server, senderNome)
                                 return 1
                             })
                     )
