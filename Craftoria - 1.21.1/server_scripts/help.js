@@ -97,13 +97,6 @@ ServerEvents.commandRegistry(event => {
 
                         tell(Text.of(''))
 
-                        category('▣', 'PROTEÇÃO')
-                        cmd('/ftbchunks claim', 'Proteger chunk')
-                        cmd('/ftbchunks unclaim', 'Remover proteção')
-                        cmd('/ftbchunks forceload', 'Manter chunk carregado')
-
-                        tell(Text.of(''))
-
                         category('ℹ', 'LIMITES')
                         tell(Text.of('  • 1 Home').color(TEXT))
                         tell(Text.of('  • 255 Chunks').color(TEXT))
